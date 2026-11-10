@@ -95,33 +95,29 @@ def abrir_login():
         app.after(0, lambda: atualizar_mensagem("Ouvindo... Diga: 'Usuário [nome] senha [senha]'", "#f39c12"))
         falar("Por favor, diga o seu usuário e a sua senha.")
         
-        texto_falado = ouvir()
+       # Limpa pontuações e converte para minúsculas
+        texto_falado = texto_falado.lower().replace(".", "").replace(",", "").replace("usuária", "usuário")
         
-        if not texto_falado:
-            app.after(0, lambda: atualizar_mensagem("Não entendi. Tente novamente.", "#e74c3c"))
-            falar("Não consegui ouvir. Tente novamente.")
-            app.after(0, reativar_botao)
-            return
-            
-        texto_falado = texto_falado.lower().replace("usuária", "usuário")
-        
-        if "usuário" in texto_falado and "senha" in texto_falado:
-            try:
-                parte1 = texto_falado.split("senha")[0]
-                parte2 = texto_falado.split("senha")[1]
-                
-                usuario_falado = parte1.replace("usuário", "").strip()
-                senha_falada = parte2.strip().replace(" ", "")
-                
-                app.after(0, lambda: preencher_campos(usuario_falado, senha_falada))
-                processar_acesso(usuario_falado, senha_falada)
-            except Exception as e:
-                app.after(0, lambda: atualizar_mensagem("Formato inválido. Use: 'Usuário X senha Y'", "#e74c3c"))
+        # Se você disser apenas "admin admin" ou "usuário admin senha admin"
+        if "senha" in texto_falado and "usuário" in texto_falado:
+            parte1 = texto_falado.split("senha")[0]
+            parte2 = texto_falado.split("senha")[1]
+            usuario_falado = parte1.replace("usuário", "").strip()
+            senha_falada = parte2.strip().replace(" ", "")
         else:
-            app.after(0, lambda: atualizar_mensagem("Diga as palavras 'usuário' e 'senha'!", "#e74c3c"))
-            falar("Faltaram as palavras chave. Repita o formato: usuário, e senha.")
-            
-        app.after(0, reativar_botao)
+            # Fallback flexível: se disser 2 palavras (ex: "admin admin"), assume usuario e senha
+            palavras = texto_falado.split()
+            if len(palavras) >= 2:
+                usuario_falado = palavras[0]
+                senha_falada = palavras[1]
+            else:
+                app.after(0, lambda: atualizar_mensagem("Diga: 'Usuário [X] senha [Y]'", "#e74c3c"))
+                falar("Formato não reconhecido. Tente novamente.")
+                app.after(0, reativar_botao)
+                return
+
+        app.after(0, lambda: preencher_campos(usuario_falado, senha_falada))
+        processar_acesso(usuario_falado, senha_falada)
 
     def iniciar_login_voz():
         botao_voz.configure(state="disabled")
